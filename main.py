@@ -1,29 +1,39 @@
-import sqlalchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session
+from orm import Base
+
 from models import User
+from models import Post
 
 
 if __name__ == '__main__':
-    user = User()
-
-    engine = sqlalchemy.create_engine('sqlite:///my.db', echo=False)
+    # Create engine, connection for database
+    engine = create_engine('sqlite:///my.db', echo=False)
     conn = engine.connect()
 
-    user.create_table(conn)
-    print(f'We have a table {engine.table_names()} into db\n')
-    data = {
-        'id': 99,
-        'username': 'myUserName',
-    }
-    print(f'Creating a new row {data}...\n')
-    user.update_table(data, conn)
-    print('Output from "select_all" method: ', user.select_all(conn))
-    print('Output from "select" method with "[id]" parameter: ', user.select(conn, ['id']))
-    another_data = {
-        'id': 11,
-        'username': 'Username',
-    }
-    print()
-    print(f'Creating an another row {data}...\n')
-    user.update_table(another_data, conn)
-    print('Output from "select_all" method: ', user.select_all(conn))
-    print('Output from "select" method with "[id]" parameter: ', user.select(conn, ['id']))
+    # Create tables in database
+    User.create_table(conn)
+    Post.create_table(conn)
+
+    user_1 = User(_id=1, name='Max')
+    user_2 = User(_id=2, name='Alex')
+    User.commit(user_1, conn)
+    User.commit(user_2, conn)
+
+    user_all_fields = User.select_all(conn)
+    print('User.select_all(conn): \n', user_all_fields, '\n')
+
+    user_name_fields = User.select(conn, 'name')
+    print('User.select(conn, "name"): \n', user_name_fields, '\n')
+
+    # update row in table 'user'
+    user_1.name = 'John'
+    User.update(user_1, conn)
+
+    user_name_fields = User.select_all(conn)
+    print('User.select_all(conn) after update: \n', user_name_fields, '\n')
+
+    # Drop tables in database
+    User.drop_table(conn)
+    Post.drop_table(conn)

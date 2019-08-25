@@ -4,30 +4,51 @@ class Base:
     """
     sep = ', '
 
-    def get_field_names(self):
-        return [k for k in self.__class__.__dict__.keys() if k and not k.startswith('__')]
+    @classmethod
+    def get_field_names(cls):
+        return [k for k in cls.__dict__.keys() if k and not k.startswith('__')]
 
-    def get_field_types(self):
-        return [v[0] for k, v in self.__class__.__dict__.items() if k and v and not k.startswith('__')]
+    @classmethod
+    def get_field_types(cls):
+        return [v[0] for k, v in cls.__dict__.items() if k and v and not k.startswith('__')]
 
-    def select_all(self, conn):
-        result = conn.execute(f'SELECT * FROM {self.__class__.__tablename__}')
+    def get_field_values(self):
+        return [v for k, v in self.__dict__.items() if k and not k.startswith('__')]
+
+    @classmethod
+    def select_all(cls, conn):
+        result = conn.execute(f'SELECT * FROM {cls.__tablename__}')
         return [row for row in result]
 
-    def select(self, conn, columns):
-        result = conn.execute(f'SELECT {self.sep.join(columns)} FROM {self.__class__.__tablename__}')
+    @classmethod
+    def select(cls, conn, *args):
+        columns_list = args
+        result = conn.execute(f'SELECT {cls.sep.join(columns_list)} FROM {cls.__tablename__}')
         return [row for row in result]
 
-    def create_table(self, conn):
-        field_names = self.get_field_names()
-        field_types = self.get_field_types()
+    @classmethod
+    def create_table(cls, conn):
+        field_names = cls.get_field_names()
+        field_types = cls.get_field_types()
         columns = [f'{field} {_type}' for field, _type in zip(field_names, field_types)]
-        conn.execute(f'CREATE TABLE IF NOT EXISTS {self.__class__.__tablename__} ({self.sep.join(columns)})')
+        conn.execute(f'CREATE TABLE IF NOT EXISTS {cls.__tablename__} ({cls.sep.join(columns)})')
 
-    def drop_table(self, conn):
-        conn.execute(f'DROP TABLE IF EXISTS {self.__class__.__tablename__}')
+    @classmethod
+    def drop_table(cls, conn):
+        conn.execute(f'DROP TABLE IF EXISTS {cls.__tablename__}')
 
-    def update_table(self, data, conn):
-        field_names = [k for k in data.keys()]
-        field_values = [v for v in data.values()]
-        conn.execute(f'INSERT INTO {self.__class__.__tablename__} ({self.sep.join(field_names)}) VALUES {tuple(field_values)}')
+    @classmethod
+    def commit(cls, instance, conn):
+        field_names = instance.get_field_names()
+        field_values = instance.get_field_values()
+        table = instance.__class__.__tablename__
+        conn.execute(f'INSERT INTO {table} ({instance.sep.join(field_names)}) VALUES {tuple(field_values)}')
+
+    @classmethod
+    def update(cls, instance, conn):
+        field_names = instance.get_field_names()
+        field_values = instance.get_field_values()
+        id_val = field_values[field_names.index('_id')]
+        expressions = [f'{name} = "{value}"' for name, value in zip(field_names, field_values)]
+        table = instance.__class__.__tablename__
+        conn.execute(f'UPDATE {table} SET {cls.sep.join(expressions)} WHERE _id = {id_val}')
