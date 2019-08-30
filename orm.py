@@ -30,8 +30,18 @@ class Base:
     def create_table(cls, conn):
         field_names = cls.get_field_names()
         field_types = cls.get_field_types()
-        columns = [f'{field} {_type}' for field, _type in zip(field_names, field_types)]
-        conn.execute(f'CREATE TABLE IF NOT EXISTS {cls.__tablename__} ({cls.sep.join(columns)})')
+        table_options = list(zip(field_names, field_types))
+        columns = [f'{field} {_type}' for field, _type in table_options if _type != 'fk']
+        sql_string = f'CREATE TABLE IF NOT EXISTS {cls.__tablename__} ({cls.sep.join(columns)})'
+        if 'fk' in field_types:
+            fk_fields = [field for field, _type in table_options if _type == 'fk']
+            fk_columns = [f'{field} INT' for field in fk_fields]
+            columns += fk_columns
+            fk_tables = [v[1] for v in cls.__dict__.values() if v[0] == 'fk']
+            fks = list(zip(fk_tables, fk_fields))
+            fk_sql_columns = [f'FOREIGN KEY({field}) REFERENCES {table}(_id)' for table, field in fks]
+            sql_string = f'CREATE TABLE IF NOT EXISTS {cls.__tablename__} ({cls.sep.join(columns)}, {cls.sep.join(fk_sql_columns)})'
+        conn.execute(sql_string)
 
     @classmethod
     def drop_table(cls, conn):

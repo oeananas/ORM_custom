@@ -24,7 +24,7 @@ class Post(Base):
 
     _id = ('INT', 'required')
     title = ('CHAR(50)', 'not_required')
-    user_id = ('INT', 'required')
+    user_id = ('fk', 'user', 'required')
 
     def __init__(self, title, user_id):
         self.title = title
