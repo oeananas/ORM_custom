@@ -37,7 +37,7 @@ class Base:
             fk_fields = [field for field, _type in table_options if _type == 'fk']
             fk_columns = [f'{field} INT' for field in fk_fields]
             columns += fk_columns
-            fk_tables = [v[1] for v in cls.__dict__.values() if v[0] == 'fk']
+            fk_tables = [v[1] for k, v in cls.__dict__.items() if not k.startswith('__') and v[0] == 'fk']
             fks = list(zip(fk_tables, fk_fields))
             fk_sql_columns = [f'FOREIGN KEY({field}) REFERENCES {table}(_id)' for table, field in fks]
             sql_string = f'CREATE TABLE IF NOT EXISTS {cls.__tablename__} ({cls.sep.join(columns)}, {cls.sep.join(fk_sql_columns)})'
